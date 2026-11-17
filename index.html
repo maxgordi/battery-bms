@@ -80,6 +80,10 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
 .fc-big { font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .fc-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .fc-basis { font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: -6px; }
+.fc-now { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.fc-now > div { background: var(--bg); border-radius: 12px; padding: 12px; min-width: 0; }
+.fc-now .fc-big { font-size: 30px; }
+.fc-main { align-items: center; }
 .fc-limit { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex: none; }
 .seg { width: auto; background: transparent; color: var(--muted); border-radius: 0; padding: 7px 11px; font-size: 13px; font-weight: 600; }
 .seg.on { background: var(--accent); color: #fff; }
@@ -117,11 +121,13 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
 
   <section class="card forecast">
     <h2>Прогноз</h2>
+    <div class="fc-now">
+      <div><div class="fc-k">Расход сейчас</div><div class="fc-big" id="fcPow">–</div></div>
+      <div><div class="fc-k">Хватит до <span id="fcLimitLbl2">10</span>%</div><div class="fc-big" id="fcTime">–</div><div class="fc-sub" id="fcEta">–</div></div>
+    </div>
     <div class="fc-main">
       <div>
-        <div class="fc-k">До <span id="fcLimitLbl">10</span>% осталось</div>
-        <div class="fc-big" id="fcTime">–</div>
-        <div class="fc-sub" id="fcEta">–</div>
+        <div class="fc-k">Нижний порог: <span id="fcLimitLbl">10</span>%</div>
       </div>
       <div class="fc-limit" role="group" aria-label="Нижний порог">
         <button class="seg" data-limit="10" id="lim10">10%</button>
@@ -144,7 +150,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
   </section>
 
   <button class="ghost" id="disconnect" hidden>Отключиться</button>
-  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 4</p>
+  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 5</p>
 </main>
 
 <script>
@@ -183,7 +189,7 @@ function render(s) {
   const V = s.total != null ? s.total / 10 : null;
   const A = s.current != null ? s.current / 10 : null;
   $("volt").innerHTML = `${f(V)} <small>V</small>`;
-  $("cur").innerHTML = `${A == null ? "–" : (A > 0 ? "+" : "") + A.toFixed(1)} <small>A</small>`;
+  $("cur").innerHTML = A == null ? "– <small>A</small>" : `${Math.abs(A).toFixed(1)} <small>A ${A > 0.05 ? "разряд" : A < -0.05 ? "заряд" : ""}</small>`;
   $("pow").innerHTML = `${s.power ?? "–"} <small>W</small>`;
   $("temp").innerHTML = `${f(s.temp1 != null ? s.temp1 / 10 : null)} <small>°C</small>`;
 
@@ -365,7 +371,7 @@ function tick() {
 
 function renderForecast() {
   const limit = prefs.limit;
-  $("fcLimitLbl").textContent = limit;
+  $("fcLimitLbl").textContent = limit; $("fcLimitLbl2").textContent = limit;
   ["lim10", "lim20"].forEach(id => $(id).classList.toggle("on", +$(id).dataset.limit === limit));
   const connected = gotData && device && device.gatt && device.gatt.connected;
   if (!connected || state.soc == null) {
@@ -373,6 +379,7 @@ function renderForecast() {
     $("fcEta").textContent = wantConnected ? "жду данные…" : "нужно подключиться";
     $("fcBasis").textContent = "Подключись, и прогноз будет пересчитываться каждые 5 секунд по текущей нагрузке.";
     $("scen").innerHTML = "";
+    $("fcPow").textContent = "–";
     return;
   }
   const soc = state.soc, capAh = state.batcap || 30;
@@ -382,11 +389,12 @@ function renderForecast() {
   const usableWh = Math.max(0, remAh - capAh * limit / 100) * vAvg;
   const hoursAt = p => (p > 3 ? usableWh / p : Infinity);
   const P = lastP != null ? lastP : powerOf(state);
-  const charging = (state.current ?? 0) > 0 && P > 3; // ток со знаком «+» = зарядка
+  const charging = (state.current ?? 0) < 0 && P > 3; // у этого BMS «+» = разряд, «−» = зарядка
 
+  $("fcPow").innerHTML = P == null ? "–" : `${Math.round(P)} <small style="font-size:16px;color:var(--muted)">W</small>`;
   if (charging) {
     $("fcTime").textContent = "заряжается";
-    $("fcEta").textContent = `сейчас ${soc}%, входит ${Math.round(P)} W`;
+    $("fcEta").textContent = `сейчас ${soc}%, входит ${Math.round(P)} W (это не расход)`;
   } else if (soc <= limit) {
     $("fcTime").textContent = "уже ниже порога";
     $("fcEta").textContent = `заряд ${soc}%, лучше подключить зарядку`;
@@ -401,8 +409,8 @@ function renderForecast() {
     $("fcTime").textContent = fmtDur(hrs);
     $("fcEta").textContent = fmtEta(hrs);
   }
-  $("fcBasis").textContent = `Нагрузка сейчас ${P == null ? "–" : Math.round(P) + " W"} · запас до ${limit}%: ` +
-    `${(usableWh / 1000).toFixed(2)} кВт·ч. Пересчёт каждые 5 секунд: включится холодильник — время сразу уменьшится.`;
+  $("fcBasis").textContent = `Запас до ${limit}%: ${(usableWh / 1000).toFixed(2)} кВт·ч. ` +
+    `Пересчёт каждые 5 секунд: включится холодильник — время сразу уменьшится, выключится — вырастет.`;
   const sc = [["Только фон, 60 W", 60], ["Фон + холодильник, 360 W", 360]];
   $("scen").innerHTML = sc.map(([k, p]) => `<div class="row"><span>${k}</span><span>${fmtDur(hoursAt(p))}</span></div>`).join("");
 }
