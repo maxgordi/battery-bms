@@ -73,6 +73,36 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
 .note { font-size: 13px; color: var(--muted); line-height: 1.45; }
 .err { font-size: 14px; color: var(--bad); line-height: 1.4; }
 .demo { font-size: 12px; text-align: center; color: var(--warn); }
+.forecast { display: flex; flex-direction: column; gap: 14px; }
+.forecast h2 { margin: 0; }
+.fc-demo { font-size: 12px; color: var(--warn); }
+.fc-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.fc-k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.fc-big { font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.fc-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.fc-basis { font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: -6px; }
+.fc-limit, .range { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex: none; }
+.seg { width: auto; background: transparent; color: var(--muted); border-radius: 0; padding: 7px 11px; font-size: 13px; font-weight: 600; }
+.seg.on { background: var(--accent); color: #fff; }
+.fc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fc-grid > div { background: var(--bg); border-radius: 10px; padding: 9px 10px; min-width: 0; }
+.fc-grid .fc-k { font-size: 10px; }
+.fc-v { font-size: 17px; font-weight: 650; margin-top: 3px; font-variant-numeric: tabular-nums; }
+@media (max-width: 380px) { .fc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fc-profile { font-size: 14px; line-height: 1.5; }
+.fc-profile b { font-variant-numeric: tabular-nums; }
+.scen { display: flex; flex-direction: column; }
+.scen .row { font-size: 14px; }
+.chart-wrap { display: flex; flex-direction: column; gap: 8px; }
+.chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+canvas { width: 100%; display: block; }
+.legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.lg { width: 14px; height: 4px; border-radius: 2px; display: inline-block; margin-left: 8px; }
+.lg.soc { background: var(--accent); margin-left: 0; }
+.lg.pw { background: var(--warn); opacity: .7; }
+.fc-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+button.small { width: auto; padding: 6px 10px; font-size: 12px; }
+button.danger { color: var(--bad); border-color: var(--bad); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -103,6 +133,52 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
     <div class="kv"><div class="k">Температура</div><div class="v" id="temp">–</div></div>
   </section>
 
+  <section class="card forecast">
+    <h2>Прогноз</h2>
+    <div class="fc-demo" id="fcDemo">Пример: история ещё не накоплена. Здесь будут твои данные после 15–30 минут подключения.</div>
+    <div class="fc-main">
+      <div>
+        <div class="fc-k">До <span id="fcLimitLbl">10</span>% осталось</div>
+        <div class="fc-big" id="fcTime">–</div>
+        <div class="fc-sub" id="fcEta">–</div>
+      </div>
+      <div class="fc-limit" role="group" aria-label="Нижний порог">
+        <button class="seg" data-limit="10" id="lim10">10%</button>
+        <button class="seg" data-limit="20" id="lim20">20%</button>
+      </div>
+    </div>
+    <div class="fc-basis" id="fcBasis">–</div>
+
+    <div class="fc-grid">
+      <div><div class="fc-k">Сейчас</div><div class="fc-v" id="pNow">–</div></div>
+      <div><div class="fc-k">Ср. 15 мин</div><div class="fc-v" id="p15">–</div></div>
+      <div><div class="fc-k">Ср. 1 час</div><div class="fc-v" id="p60">–</div></div>
+      <div><div class="fc-k">Ср. 6 часов</div><div class="fc-v" id="p360">–</div></div>
+    </div>
+
+    <div class="fc-profile" id="profile">–</div>
+
+    <div class="scen" id="scen"></div>
+
+    <div class="chart-wrap">
+      <div class="chart-head"><span>Заряд и мощность</span>
+        <span class="range" role="group" aria-label="Период">
+          <button class="seg" data-range="6" id="r6">6 ч</button>
+          <button class="seg" data-range="24" id="r24">24 ч</button>
+          <button class="seg" data-range="168" id="r168">7 дн</button>
+        </span>
+      </div>
+      <canvas id="chart" height="190"></canvas>
+      <div class="legend"><span class="lg soc"></span>заряд, %<span class="lg pw"></span>мощность, W</div>
+    </div>
+
+    <div class="fc-foot">
+      <span id="histInfo">–</span>
+      <button class="ghost small" id="clearHist">Очистить историю</button>
+      <button class="ghost small danger" id="clearYes" hidden>Да, удалить</button>
+    </div>
+  </section>
+
   <section class="card">
     <h2>Банки</h2>
     <div class="cellsum" id="cellsum">–</div>
@@ -115,7 +191,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
   </section>
 
   <button class="ghost" id="disconnect" hidden>Отключиться</button>
-  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 2</p>
+  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 3</p>
 </main>
 
 <script>
@@ -196,7 +272,9 @@ function feed(dv) {
     const a = buf.indexOf("{"); if (a < 0) { buf = ""; return; }
     const b = buf.indexOf("}", a); if (b < 0) { buf = buf.slice(a); return; }
     const piece = buf.slice(a, b + 1); buf = buf.slice(b + 1);
-    try { Object.assign(state, JSON.parse(piece)); gotData = true; scheduleRender(); } catch (e) {}
+    let obj;
+    try { obj = JSON.parse(piece); } catch (e) { continue; }
+    Object.assign(state, obj); gotData = true; scheduleRender(); onLive(obj);
   }
 }
 let raf = 0;
@@ -218,6 +296,7 @@ async function attach() {
       rx.addEventListener("characteristicvaluechanged", e => feed(e.target.value));
       await rx.startNotifications();
       setStatus("подключён", "on");
+      keepAwake();
       showErr("");
       gotData = false;
       setTimeout(async () => {
@@ -289,6 +368,253 @@ $("disconnect").addEventListener("click", () => {
 });
 
 render(SAMPLE);
+
+// ================= История, аналитика и прогноз =================
+// Пока страница подключена, раз в 30 с сохраняем замер: [время, SOC %, остаток Ah, V, средняя мощность W].
+// Мощность усредняем по всем показаниям за эти 30 с, поэтому включения холодильника попадают в среднее.
+const HKEY = "hnbms-history-v1", PKEY = "hnbms-prefs-v1";
+const SAMPLE_MS = 30000, KEEP_MS = 7 * 24 * 3600e3;
+const loadJSON = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let hist = loadJSON(HKEY, []);
+let prefs = Object.assign({ limit: 10, range: 6 }, loadJSON(PKEY, {}));
+let live = [], liveStart = 0;
+
+function powerOf(s) {
+  if (s.power) return Math.abs(s.power);
+  if (s.total != null && s.current != null) return Math.abs((s.total / 10) * (s.current / 10));
+  return s.power === 0 ? 0 : null;
+}
+
+function onLive(obj) {
+  const now = Date.now();
+  if ("power" in obj || "current" in obj) {
+    const p = powerOf(state);
+    if (p != null) live.push(p);
+  }
+  if (!liveStart) liveStart = now;
+  if (now - liveStart >= SAMPLE_MS && state.soc != null) {
+    const avgP = live.length ? live.reduce((a, b) => a + b, 0) / live.length : null;
+    hist.push([now, state.soc, state.soccap ?? null, state.total != null ? state.total / 10 : null,
+      avgP == null ? null : Math.round(avgP)]);
+    const cut = now - KEEP_MS;
+    while (hist.length && hist[0][0] < cut) hist.shift();
+    saveJSON(HKEY, hist);
+    live = []; liveStart = now;
+    renderAnalytics();
+  }
+}
+
+// Пример истории для первого открытия: фон 60 W + холодильник 300 W (12 мин работает, 20 мин стоит)
+function demoHistory() {
+  const out = [], end = Date.now(), start = end - 6 * 3600e3, capWh = 30 * 24 * 3.25;
+  let wh = capWh;
+  for (let t = start; t <= end; t += SAMPLE_MS) {
+    const m = ((t - start) / 60000) % 32;
+    const p = 60 + (m < 12 ? 300 : 0) + (Math.sin(t / 7e5) * 6);
+    wh -= p * SAMPLE_MS / 3600e3;
+    const soc = Math.round(wh / capWh * 100);
+    out.push([t, soc, +(30 * wh / capWh).toFixed(1), +(24 * 3.3).toFixed(1), Math.round(p)]);
+  }
+  return out;
+}
+
+const pct = (arr, q) => { if (!arr.length) return null; const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; };
+
+function windowAvg(h, now, minutes) {
+  const from = now - minutes * 60000;
+  const ps = h.filter(r => r[0] >= from && r[4] != null).map(r => r[4]);
+  if (!ps.length) return null;
+  const covered = ps.length * SAMPLE_MS / 60000; // минут с данными
+  return { w: ps.reduce((a, b) => a + b, 0) / ps.length, covered, full: covered >= minutes * 0.5 };
+}
+
+function fmtDur(hours) {
+  if (hours == null || !isFinite(hours)) return "–";
+  if (hours > 24 * 14) return "больше 2 недель";
+  const totalMin = Math.round(hours * 60);
+  const d = Math.floor(totalMin / 1440), h = Math.floor((totalMin % 1440) / 60), m = totalMin % 60;
+  if (d) return `${d} дн ${h} ч`;
+  if (h) return `${h} ч ${String(m).padStart(2, "0")} мин`;
+  return `${m} мин`;
+}
+function fmtEta(hours, now) {
+  if (hours == null || !isFinite(hours) || hours > 24 * 14) return "";
+  const t = new Date(now + hours * 3600e3);
+  const opts = hours > 20 ? { weekday: "short", hour: "2-digit", minute: "2-digit" } : { hour: "2-digit", minute: "2-digit" };
+  return "примерно " + t.toLocaleString("ru-RU", opts);
+}
+
+function renderAnalytics() {
+  const demo = hist.length < 4;
+  const h = demo ? demoHistory() : hist;
+  $("fcDemo").hidden = !demo;
+  const last = h[h.length - 1];
+  const now = demo ? last[0] : Date.now();
+  const connected = !demo && gotData && device && device.gatt && device.gatt.connected;
+
+  // текущее состояние: живые данные, если подключены, иначе последний замер
+  const soc = connected && state.soc != null ? state.soc : last[1];
+  const capAh = (connected && state.batcap) || 30;
+  const remAh = connected && state.soccap != null ? state.soccap : (last[2] != null ? last[2] : soc / 100 * capAh);
+  const nCells = Object.keys(state).filter(k => /^cell\d+$/.test(k)).length || 24;
+  const vAvg = nCells * 3.25; // среднее напряжение LiFePO4 на разряде
+  const nowP = connected ? powerOf(state) : last[4];
+
+  const a15 = windowAvg(h, now, 15), a60 = windowAvg(h, now, 60), a360 = windowAvg(h, now, 360);
+  const show = (id, a) => { $(id).textContent = a ? `${Math.round(a.w)} W` : "–"; };
+  $("pNow").textContent = nowP != null ? `${Math.round(nowP)} W` : "–";
+  show("p15", a15); show("p60", a60); show("p360", a360);
+
+  // заряжается ли: SOC за последние 30 мин вырос
+  const recent = h.filter(r => r[0] >= now - 30 * 60000);
+  const charging = recent.length > 2 && recent[recent.length - 1][1] > recent[0][1];
+
+  // какую мощность брать для прогноза: час (ловит циклы холодильника) → 15 мин → 6 ч → сейчас
+  let basisP = null, basisTxt = "";
+  if (a60 && a60.full) { basisP = a60.w; basisTxt = "средней мощности за последний час"; }
+  else if (a360 && a360.covered >= 30) { basisP = a360.w; basisTxt = `средней мощности за ${fmtDur(a360.covered / 60)} замеров`; }
+  else if (a15) { basisP = a15.w; basisTxt = `средней мощности за ${Math.round(a15.covered)} мин (мало данных, прогноз грубый)`; }
+  else if (nowP != null) { basisP = nowP; basisTxt = "текущей мощности (истории ещё нет, прогноз грубый)"; }
+
+  // оценка по падению заряда за последние 24 ч (работает и через перерывы, когда страница была закрыта)
+  const day = h.filter(r => r[0] >= now - 24 * 3600e3 && r[2] != null);
+  let trendW = null;
+  if (day.length > 1) {
+    const f = day[0], l = day[day.length - 1], hrs = (l[0] - f[0]) / 3600e3;
+    if (hrs >= 1 && f[1] - l[1] >= 3) trendW = (f[2] - l[2]) / hrs * vAvg;
+  }
+
+  const limit = prefs.limit;
+  $("fcLimitLbl").textContent = limit;
+  const usableWh = Math.max(0, remAh - capAh * limit / 100) * vAvg;
+  const hoursAt = p => (p > 3 ? usableWh / p : Infinity);
+
+  if (charging) {
+    $("fcTime").textContent = "заряжается";
+    $("fcEta").textContent = `сейчас ${soc}%`;
+  } else if (soc <= limit) {
+    $("fcTime").textContent = "уже ниже порога";
+    $("fcEta").textContent = `заряд ${soc}% — лучше подключить зарядку`;
+  } else if (basisP == null) {
+    $("fcTime").textContent = "–";
+    $("fcEta").textContent = "нужно подключиться";
+  } else if (basisP <= 3) {
+    $("fcTime").textContent = "нагрузки нет";
+    $("fcEta").textContent = "аккумулятор почти не тратится";
+  } else {
+    const hrs = hoursAt(basisP);
+    $("fcTime").textContent = fmtDur(hrs);
+    $("fcEta").textContent = fmtEta(hrs, now);
+  }
+  let basis = `Расчёт по ${basisTxt || "–"}${basisP != null ? `: ${Math.round(basisP)} W` : ""}. ` +
+    `Запас до ${limit}%: ${(usableWh / 1000).toFixed(2)} кВт·ч.`;
+  if (trendW != null) basis += ` По снижению заряда за сутки выходит ${Math.round(trendW)} W в среднем — ${fmtDur(hoursAt(trendW))}.`;
+  if (!connected && !demo) basis += ` Данные на ${new Date(last[0]).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}.`;
+  $("fcBasis").textContent = basis;
+
+  // профиль нагрузки за 6 ч: фон и включения (холодильник)
+  const ps = h.filter(r => r[0] >= now - 6 * 3600e3 && r[4] != null).map(r => r[4]);
+  let base = null, peak = null, duty = null;
+  if (ps.length >= 10) {
+    base = pct(ps, 0.2); peak = pct(ps, 0.9);
+    if (peak - base >= 80) {
+      const mid = (base + peak) / 2;
+      duty = ps.filter(p => p > mid).length / ps.length;
+      $("profile").innerHTML = `Фоновая нагрузка около <b>${Math.round(base)} W</b>. ` +
+        `Включения до <b>${Math.round(peak)} W</b> занимают примерно <b>${Math.round(duty * 100)}%</b> времени ` +
+        `(похоже на холодильник). Поэтому в среднем выходит больше фона.`;
+    } else {
+      $("profile").innerHTML = `Нагрузка ровная, около <b>${Math.round(pct(ps, 0.5))} W</b>, без заметных включений.`;
+    }
+  } else {
+    $("profile").textContent = "Профиль нагрузки появится после 5 минут подключения.";
+  }
+
+  // сценарии
+  const sc = [];
+  if (base != null) sc.push([`Только фон, ${Math.round(base)} W`, base]);
+  if (basisP != null) sc.push([`Как сейчас в среднем, ${Math.round(basisP)} W`, basisP]);
+  if (peak != null && duty != null) sc.push([`Если всё время с пиком, ${Math.round(peak)} W`, peak]);
+  $("scen").innerHTML = sc.length ? sc.map(([k, p]) =>
+    `<div class="row"><span>${k}</span><span>${p > 3 ? fmtDur(hoursAt(p)) : "–"}</span></div>`).join("") : "";
+
+  // инфо об истории
+  if (demo) $("histInfo").textContent = "Показан пример. История пишется, пока страница подключена.";
+  else {
+    const span = (hist[hist.length - 1][0] - hist[0][0]) / 3600e3;
+    $("histInfo").textContent = `История: ${hist.length} замеров за ${fmtDur(span)}. Хранится на этом телефоне 7 дней.`;
+  }
+  ["lim10", "lim20"].forEach(id => $(id).classList.toggle("on", +$(id).dataset.limit === limit));
+  ["r6", "r24", "r168"].forEach(id => $(id).classList.toggle("on", +$(id).dataset.range === prefs.range));
+  drawChart(h, now);
+}
+
+function drawChart(h, now) {
+  const cv = $("chart"), css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = 190;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+  const L = 30, R = 38, T = 8, B = 22, pw = W - L - R, ph = H - T - B;
+  const from = now - prefs.range * 3600e3;
+  const pts = h.filter(r => r[0] >= from);
+  const x = t => L + (t - from) / (now - from) * pw;
+  const ySoc = s => T + ph - s / 100 * ph;
+  const maxP = Math.max(100, ...pts.map(r => r[4] || 0)) * 1.15;
+  const yP = p => T + ph - p / maxP * ph;
+
+  c.font = "10px -apple-system, sans-serif"; c.fillStyle = col("--muted"); c.strokeStyle = col("--line"); c.lineWidth = 1;
+  [0, 25, 50, 75, 100].forEach(s => {
+    c.beginPath(); c.moveTo(L, ySoc(s)); c.lineTo(L + pw, ySoc(s)); c.stroke();
+    c.textAlign = "right"; c.fillText(s + "%", L - 4, ySoc(s) + 3);
+    c.textAlign = "left"; c.fillText(Math.round(maxP * s / 100) + "", L + pw + 4, ySoc(s) + 3);
+  });
+  c.textAlign = "left"; c.fillText("W", L + pw + 4, T + 2 + 8);
+  const tl = t => new Date(t).toLocaleString("ru-RU", prefs.range > 24 ? { day: "numeric", month: "short" } : { hour: "2-digit", minute: "2-digit" });
+  c.textAlign = "left"; c.fillText(tl(from), L, H - 6);
+  c.textAlign = "center"; c.fillText(tl((from + now) / 2), L + pw / 2, H - 6);
+  c.textAlign = "right"; c.fillText(tl(now), L + pw, H - 6);
+  if (pts.length < 2) return;
+
+  const gap = SAMPLE_MS * 4;
+  // мощность — столбики
+  c.fillStyle = col("--warn"); c.globalAlpha = 0.35;
+  const bw = Math.max(1, pw / ((now - from) / SAMPLE_MS));
+  pts.forEach(r => { if (r[4] != null) c.fillRect(x(r[0]) - bw / 2, yP(r[4]), bw, T + ph - yP(r[4])); });
+  c.globalAlpha = 1;
+  // заряд — линия с разрывами
+  c.strokeStyle = col("--accent"); c.lineWidth = 2; c.beginPath();
+  pts.forEach((r, i) => {
+    const brk = i === 0 || r[0] - pts[i - 1][0] > gap;
+    brk ? c.moveTo(x(r[0]), ySoc(r[1])) : c.lineTo(x(r[0]), ySoc(r[1]));
+  });
+  c.stroke();
+  // порог
+  c.strokeStyle = col("--bad"); c.setLineDash([4, 4]); c.lineWidth = 1;
+  c.beginPath(); c.moveTo(L, ySoc(prefs.limit)); c.lineTo(L + pw, ySoc(prefs.limit)); c.stroke(); c.setLineDash([]);
+}
+
+document.querySelectorAll("[data-limit]").forEach(b => b.addEventListener("click", () => {
+  prefs.limit = +b.dataset.limit; saveJSON(PKEY, prefs); renderAnalytics();
+}));
+document.querySelectorAll("[data-range]").forEach(b => b.addEventListener("click", () => {
+  prefs.range = +b.dataset.range; saveJSON(PKEY, prefs); renderAnalytics();
+}));
+$("clearHist").addEventListener("click", () => { if ($("clearYes").hidden) { $("clearYes").hidden = false; $("clearHist").textContent = "Отмена"; } else cancelClear(); });
+function cancelClear() { $("clearYes").hidden = true; $("clearHist").textContent = "Очистить историю"; }
+$("clearYes").addEventListener("click", () => { hist = []; saveJSON(HKEY, hist); cancelClear(); renderAnalytics(); });
+
+// не даём экрану гаснуть, пока подключены, чтобы запись не прерывалась
+let wakeLock = null;
+async function keepAwake() {
+  try { if (navigator.wakeLock && wantConnected) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+
+setInterval(renderAnalytics, 30000);
+window.addEventListener("resize", renderAnalytics);
+renderAnalytics();
 </script>
 </body>
 </html>
