@@ -115,11 +115,12 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
   </section>
 
   <button class="ghost" id="disconnect" hidden>Отключиться</button>
-  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span></p>
+  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 2</p>
 </main>
 
 <script>
-const SVC = 0xfff0, RX = 0xfff1, TX = 0xfff2;
+const U = n => "0000" + n + "-0000-1000-8000-00805f9b34fb";
+const SVC = U("fff0"), RX = U("fff1"), TX = U("fff2");
 const NUDGE = new Uint8Array([0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77]);
 const $ = id => document.getElementById(id);
 let state = {}, device = null, wantConnected = false, gotData = false;
@@ -241,13 +242,30 @@ $("connect").addEventListener("click", async () => {
     showErr("Этот браузер не умеет Bluetooth. На iPhone открой эту страницу в приложении Bluefy (бесплатно в App Store).");
     return;
   }
-  try {
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: "HN_BMS" }, { namePrefix: "HN_" }, { services: [SVC] }],
-      optionalServices: [SVC],
-    });
-  } catch (e) {
-    if (e.name !== "NotFoundError") showErr("Ошибка выбора устройства: " + e.message);
+  const errText = e => {
+    if (!e) return "без описания";
+    if (typeof e === "string") return e;
+    return [e.name, e.message, e.code].filter(Boolean).join(": ") || JSON.stringify(e) || String(e);
+  };
+  const SVC_FULL = "0000fff0-0000-1000-8000-00805f9b34fb";
+  const variants = [
+    { filters: [{ name: "HN_BMS" }], optionalServices: [SVC_FULL] },
+    { acceptAllDevices: true, optionalServices: [SVC_FULL] },
+  ];
+  device = null;
+  let lastErr = null;
+  for (const opts of variants) {
+    try {
+      device = await navigator.bluetooth.requestDevice(opts);
+      break;
+    } catch (e) {
+      lastErr = e;
+      // пользователь сам закрыл список — не пробуем дальше
+      if (e && e.name === "NotFoundError" && /cancel/i.test(e.message || "")) return;
+    }
+  }
+  if (!device) {
+    showErr("Не получилось выбрать устройство (" + errText(lastErr) + "). Проверь, что Bluetooth на телефоне включён и аккумулятор рядом, и нажми «Подключить» ещё раз.");
     return;
   }
   device.addEventListener("gattserverdisconnected", () => {
