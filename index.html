@@ -122,8 +122,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
   <section class="card forecast">
     <h2>Прогноз</h2>
     <div class="fc-now">
-      <div><div class="fc-k">Расход сейчас</div><div class="fc-big" id="fcPow">–</div></div>
-      <div><div class="fc-k">Хватит до <span id="fcLimitLbl2">10</span>%</div><div class="fc-big" id="fcTime">–</div><div class="fc-sub" id="fcEta">–</div></div>
+      <div><div class="fc-k" id="fcPowLbl">Расход сейчас</div><div class="fc-big" id="fcPow">–</div></div>
+      <div><div class="fc-k" id="fcTimeLbl">Хватит до <span id="fcLimitLbl2">10</span>%</div><div class="fc-big" id="fcTime">–</div><div class="fc-sub" id="fcEta">–</div></div>
     </div>
     <div class="fc-main">
       <div>
@@ -150,7 +150,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: v
   </section>
 
   <button class="ghost" id="disconnect" hidden>Отключиться</button>
-  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 5</p>
+  <p class="note">Работает в браузере Bluefy на iPhone (или Chrome на Android/компьютере). Аккумулятор держит одно подключение: закрой другие приложения, которые к нему подключены. Обновлено: <span id="upd">–</span> · версия 6</p>
 </main>
 
 <script>
@@ -371,7 +371,7 @@ function tick() {
 
 function renderForecast() {
   const limit = prefs.limit;
-  $("fcLimitLbl").textContent = limit; $("fcLimitLbl2").textContent = limit;
+  $("fcLimitLbl").textContent = limit;
   ["lim10", "lim20"].forEach(id => $(id).classList.toggle("on", +$(id).dataset.limit === limit));
   const connected = gotData && device && device.gatt && device.gatt.connected;
   if (!connected || state.soc == null) {
@@ -380,6 +380,8 @@ function renderForecast() {
     $("fcBasis").textContent = "Подключись, и прогноз будет пересчитываться каждые 5 секунд по текущей нагрузке.";
     $("scen").innerHTML = "";
     $("fcPow").textContent = "–";
+    $("fcPowLbl").textContent = "Расход сейчас";
+    $("fcTimeLbl").innerHTML = `Хватит до <span id="fcLimitLbl2">${limit}</span>%`;
     return;
   }
   const soc = state.soc, capAh = state.batcap || 30;
@@ -389,12 +391,31 @@ function renderForecast() {
   const usableWh = Math.max(0, remAh - capAh * limit / 100) * vAvg;
   const hoursAt = p => (p > 3 ? usableWh / p : Infinity);
   const P = lastP != null ? lastP : powerOf(state);
-  const charging = (state.current ?? 0) < 0 && P > 3; // у этого BMS «+» = разряд, «−» = зарядка
+  // у этого BMS «+» = разряд, «−» = зарядка (и ток, и мощность)
+  const charging = ((state.current ?? 0) < 0 || (state.power ?? 0) < 0) && P > 3;
 
-  $("fcPow").innerHTML = P == null ? "–" : `${Math.round(P)} <small style="font-size:16px;color:var(--muted)">W</small>`;
+  $("fcPowLbl").textContent = charging ? "Зарядка сейчас" : "Расход сейчас";
+  $("fcTimeLbl").innerHTML = charging ? "Зарядится до 100%" : `Хватит до <span id="fcLimitLbl2">${limit}</span>%`;
+  $("fcPow").innerHTML = P == null ? "–" : `${charging ? "+" : ""}${Math.round(P)} <small style="font-size:16px;color:var(--muted)">W</small>`;
+  $("fcPow").style.color = charging ? "var(--accent)" : "";
+
   if (charging) {
-    $("fcTime").textContent = "заряжается";
-    $("fcEta").textContent = `сейчас ${soc}%, входит ${Math.round(P)} W (это не расход)`;
+    const needAh = Math.max(0, capAh - remAh);
+    const A = Math.abs((state.current ?? 0) / 10);
+    // по току точнее (Ah / A); если тока нет — по мощности
+    const hrs = A > 0.1 ? needAh / A : needAh * vAvg / P;
+    if (soc >= 100 || needAh < 0.05) {
+      $("fcTime").textContent = "почти полный";
+      $("fcEta").textContent = "идёт дозарядка и выравнивание банок";
+    } else {
+      $("fcTime").textContent = fmtDur(hrs);
+      $("fcEta").textContent = fmtEta(hrs);
+    }
+    $("fcBasis").textContent = `Осталось зарядить ${needAh.toFixed(1)} Ah (≈ ${(needAh * vAvg / 1000).toFixed(2)} кВт·ч)` +
+      (A > 0.1 ? ` при токе ${A.toFixed(1)} A.` : ".") +
+      " Последние 2–5% обычно идут медленнее: зарядник снижает ток, поэтому реально может выйти немного дольше.";
+    $("scen").innerHTML = "";
+    return;
   } else if (soc <= limit) {
     $("fcTime").textContent = "уже ниже порога";
     $("fcEta").textContent = `заряд ${soc}%, лучше подключить зарядку`;
